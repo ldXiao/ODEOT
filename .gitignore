@@ -1,0 +1,7 @@
+# ODEOT ignore files
+*.pyc
+__pycache__
+.idea
+*.sh
+*.png
+*.pt
