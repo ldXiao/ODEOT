@@ -123,15 +123,16 @@ class InjAugODE(nn.Module):
         self.var_dim = var_dim
         self.odeblock = ODEBlock(ODEfunc(var_dim, ker_dims))
         self.device = device
-        self.augment_part = torch.randn((sample_size, var_dim-self.in_dim),requires_grad=True, device="cuda")
-
+        # self.augment_part = torch.ones((sample_size, var_dim-self.in_dim),requires_grad=False, device="cuda")
+        # self.augMLP = MLP()
+        self.augout_part = None
 
     def forward(self, x):
         out = torch.zeros(x.shape[0], self.var_dim).to(self.device)
         out[:, 0: x.shape[1]] = x
-        out[:, x.shape[1]:] = self.augment_part
+        # out[:, x.shape[1]:] = torch.ones((x.shape[0], self.var_dim-x.shape[1]), device=self.device)
         out = self.odeblock(out)
-
+        self.augout_part=out[:,x.shape[1]:]
         return out
 
     def proj_forward(self, x):
@@ -140,10 +141,22 @@ class InjAugODE(nn.Module):
         return out
 
     def invert(self, y):
-        input = torch.ones(y.shape[0],self.var_dim)
+        input = torch.ones(y.shape[0],self.var_dim).to(self.device)
         input[:,0:y.shape[1]] = y
         input = self.odeblock.invert(input)
         input = input[:,0:self.in_dim]
         return input
+
+    def event_t(self, t, x):
+        # timescale = torch.tensor([0,t]).type_as(x)
+        # print(x)
+        # print(t)
+        out = torch.zeros(x.shape[0], self.var_dim).to(self.device)
+        out[:, 0: x.shape[1]] = x
+        # out[:, x.shape[1]:] = self.MLP(torch.ones(x.shape[0], self.var_dim-x.shape[1]).to(args.device))
+        out = self.odeblock.event_t(t, out)
+        out = out[:, 0:self.out_dim]
+        # out = self.MLP(out)
+        return out
 
 
