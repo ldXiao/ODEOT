@@ -1,6 +1,8 @@
+import torch
+
 import numpy as np
 import open3d
-import torch
+
 import point_cloud_utils as pcu
 import time
 #
@@ -150,8 +152,12 @@ def plot_flow(x, t, phi, grid_size, t_sample):
 
 
         pcloud_gt = open3d.PointCloud()
-        pcloud_gt.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
+        pcloud_gt.points = open3d.Vector3dVector(x.cpu().numpy())
         pcloud_gt.paint_uniform_color(gt_color)
+
+        pcloud_inv = open3d.PointCloud()
+        pcloud_inv.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
+        pcloud_inv.paint_uniform_color(gt_color)
 
         pcloud_recon = open3d.PointCloud()
         pcloud_recon.points = open3d.Vector3dVector(recon_vertices.cpu().numpy())
@@ -165,29 +171,21 @@ def plot_flow(x, t, phi, grid_size, t_sample):
 
         pc_initial=open3d.PointCloud()
         pc_initial.points = open3d.Vector3dVector(t.cpu().numpy())
-        pc_initial.paint_uniform_color(curve_color)
+        pc_initial.paint_uniform_color(recon_color)
 
 
 
         flow_ode = open3d.LineSet()
-        # print(x.shape)
-        # print(t.shape)
+
         flow = get_Lines(phi,t[::t_sample,:],15)
         flow_ode.points, flow_ode.lines = open3d.Vector3dVector(flow[0]), \
                                           open3d.Vector2iVector(flow[1])
-        # flow_ode.colors = open3d.Vector3dVector(curve_color)
-        vis = open3d.Visualizer()
-        vis.create_window()
-        for geom in [pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode]:
-            vis.add_geometry(geom)
-        # vis.add_geometry([pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode])
-        vis.remove_geometry(flow_ode)
-        vis.update_geometry()
-        vis.update_renderer()
-        vis.poll_events()
-        vis.run()
 
-        # open3d.draw_geometries([pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode])
+
+        open3d.draw_geometries([pcloud_gt, pcloud_inv,pcloud_recon, mesh_recon, pc_initial, flow_ode])
+
+ts = np.linspace(0,1,30)
+i = 0
 
 def animate_flow(x,t, phi, grid_size, t_sample):
     import open3d
@@ -205,7 +203,7 @@ def animate_flow(x,t, phi, grid_size, t_sample):
         curve_color = np.array([0.2, 0.2, 0.5])
 
         pcloud_gt = open3d.PointCloud()
-        pcloud_gt.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
+        pcloud_gt.points = open3d.Vector3dVector(x.cpu().numpy())
         pcloud_gt.paint_uniform_color(gt_color)
 
         pcloud_recon = open3d.PointCloud()
@@ -241,16 +239,37 @@ def animate_flow(x,t, phi, grid_size, t_sample):
         # vis.update_geometry()
         # vis.update_renderer()
         # vis.poll_events()
-        for i in range(11):
-            def next_fram(vis):
-                # ctr = vis.get_view_control()
-                # ctr.rotate(10.0, 0.0)
-                flow = get_Lines(phi, t[::t_sample, :], 15)[i:i+2]
-                flow_ode.points, flow_ode.lines = open3d.Vector3dVector(flow[0]), \
-                                                  open3d.Vector2iVector(flow[1])
-                vis.update_geometry()
-                return False
-            open3d.draw_geometries_with_animation_callback(
-                [pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode],
-                next_fram)
+        def next_frame(vis):
+            # ctr = vis.get_view_control()
+            # ctr.rotate(10.0, 0.0)
+            # global i, ts
+
+            global i, ts
+            if i == 29:
+                return True
+            print(i)
+            i += 1
+            t = ts[i]
+            mesh_faces = meshgrid_face_indices(grid_size)
+            mesh_vertices = phi.event_t(t, mesh_samples)[:, 0:3]
+            mesh_recon.vertices = open3d.Vector3dVector(mesh_vertices.cpu().numpy())
+            mesh_recon.triangles = open3d.Vector3iVector(mesh_faces)
+            mesh_recon.compute_vertex_normals()
+            mesh_recon.paint_uniform_color(mesh_color)
+
+            vis.update_geometry()
+            vis.update_renderer()
+            return False
+
+        def revert(vis):
+            global i
+            i = 0
+            return False
+
+        key_to_callback = {}
+        key_to_callback[ord(",")] = next_frame
+        key_to_callback[ord(".")] = revert
+        open3d.draw_geometries_with_key_callbacks(
+            [pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode],
+            key_to_callback)
 

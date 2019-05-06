@@ -2,9 +2,10 @@ import argparse
 import open3d
 import torch
 import torch.nn as nn
+
 import matplotlib.pyplot as plt
-# import open3d
 import numpy as np
+
 import point_cloud_utils as pcu
 from fml.nn import SinkhornLoss
 from ODEOT.ANODE import InjAugODE
@@ -79,8 +80,8 @@ def main():
     # print(x)
     # torch.save(phi.state_dict(), "../models/phi.pt")
     phi.load_state_dict(torch.load("../models/phi.pt"))
-    plot_flow(x[:,0:3], t, phi, 128,  t.shape[0]//100)
-    # animate_flow(x[:,0:3],t,phi,128, t.shape[0]//100)
+    # plot_flow(x[:,0:3], t, phi, 128,  t.shape[0]//100)
+    animate_flow(x[:,0:3],t,phi,128, t.shape[0]//100)
 
 if __name__ == "__main__":
     main()
