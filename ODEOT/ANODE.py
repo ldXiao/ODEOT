@@ -115,9 +115,9 @@ class ParametrizationNet(nn.Module):
         # out = self.MLP(out)
         return out
 
-class InjAugODE(nn.Module):
+class InjAugNODE(nn.Module):
     def __init__(self, in_dim=2, out_dim=3, var_dim=50, sample_size=100, ker_dims:list=[1024,1024,1024,1024], device:str="cuda"):
-        super(InjAugODE, self).__init__()
+        super(InjAugNODE, self).__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.var_dim = var_dim

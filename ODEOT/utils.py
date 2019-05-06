@@ -1,7 +1,8 @@
+import open3d
 import torch
 
 import numpy as np
-import open3d
+
 
 import point_cloud_utils as pcu
 import time
@@ -273,3 +274,37 @@ def animate_flow(x,t, phi, grid_size, t_sample):
             [pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode],
             key_to_callback)
 
+def gen2Dsample_square(num:int, func:callable, maxval:float):
+    """
+    This is classical acceptance-rejection algorithm to generate samples according to a continuous distribution
+    :param num: int number of sample required
+    :param func: distribution function non=negative everywhere but we have know the maximal value of func
+    :param maxval: maximal value of func
+    :return: np.array(num, 2)
+    """
+    count = 0
+    sample = np.zeros((num, 2))
+    while count < num:
+        z = np.random.rand(2)
+        u = np.random.rand(1)
+        val = func(z[0], z[1])
+        if u < val/ maxval:
+            sample[count] = z.copy()
+            count+=1
+            print(count)
+    return sample
+
+def gen2Dsample_disk(num:int,func:callable, maxval:float):
+    count = 0
+    sample = np.zeros((num, 2))
+    while count < num:
+        z = np.random.rand(2) * 2 -np.ones(2)
+        u = np.random.rand(1)
+        r2= z[0] ** 2 + z[1]** 2
+        if r2 < 1:
+            val = func(z[0], z[1])
+            if u < val / maxval:
+                sample[count] = z.copy()
+                count += 1
+                print(count)
+    return sample

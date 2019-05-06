@@ -8,7 +8,7 @@ import numpy as np
 
 import point_cloud_utils as pcu
 from fml.nn import SinkhornLoss
-from ODEOT.ANODE import InjAugODE
+from ODEOT.ANODE import InjAugNODE
 from ODEOT.utils import load_mesh_by_file_extension, plot_flow, embed_3d, animate_flow
 
 
@@ -49,7 +49,7 @@ def main():
 
     # The model is a simple fully connected network mapping a 2D parameter point to 3D
     # phi = ParametrizationNet(in_dim=3, out_dim=3, var_dim=4).to(args.device)
-    phi = InjAugODE(in_dim=3, out_dim=3, var_dim=3, sample_size=x.shape[0], ker_dims=[1024,1024,1024,1024], device="cuda").to(args.device)
+    phi = InjAugNODE(in_dim=3, out_dim=3, var_dim=3, sample_size=x.shape[0], ker_dims=[1024,1024,1024,1024], device="cuda").to(args.device)
     # Eps is 1/lambda and max_iters is the maximum number of Sinkhorn iterations to do
     loss_fun = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
     dummy = torch.ones(x.shape[0], 3).to(args.device)
