@@ -49,8 +49,43 @@ def func_square(x,y):
             return 0
     else:
         return 0
+    # return 1
+
+def pattern_square(x,y):
+    if (x<1 and x>0) and (y<1 and y>0):
+        # xt = (x <1 and x >2/3) or (x>0 and x < 1/3)
+        # yt = (y <1 and y >2/3) or (y>0 and y < 1/3)
+        # if (xt and yt):
+        #     return 1
+        # elif (not xt and not yt):
+        #     return 1
+        # else:
+        #     return 0
+        absx = abs(x - 0.5)
+        absy = abs(y - 0.5)
+        maxabs = max(absx, absy)
+        if maxabs < 0.1:
+            return 1
+        elif maxabs >0.2 and maxabs <0.3:
+            return 0.5
+        elif maxabs>0.4:
+            return 0.3
+        else:
+            return 0
+    else:
+        return 0
 
 def func_disk(x,y):
+    # dist0 = np.sqrt((x+0.7)** 2 + (y+0.7)**2)
+    # dist1 = np.sqrt( (x-0.3)**2 + (y-0.3)**2)
+    # if dist0 < 0.2:
+    #     return 1
+    # elif dist1 > 0.3 and dist1<0.4:
+    #     return 1
+    # elif dist1 > 0.5 and dist1 < 0.6:
+    #     return 1
+    # else:
+    #     return 0
     return np.exp(- 3 * (x **2 + y** 2))* np.cos(2.5 * np.pi * np.sqrt((x **2 + y** 2))) ** 2
 
 def PlotFit(phi, t, x):
@@ -122,11 +157,13 @@ def main():
     sample_x = sample_x - np.ones_like(sample_x) * 3
     sample_t = gen2Dsample_square(1000, func_square, 1).astype(np.float32)
 
-    plt.plot(sample_t[:,0],sample_t[:,1], 'x')
+    plt.plot(sample_t[:,0],sample_t[:,1], 'x', label="source")
+    plt.plot(sample_x[:, 0], sample_x[:, 1], 'x', label="target")
+    plt.legend()
     plt.show()
     t = torch.from_numpy(sample_t).to(args.device)
     x = torch.from_numpy(sample_x).to(args.device)
-    vardim = 4
+    vardim = 40
     phi = InjAugNODE(in_dim=2, out_dim=2, var_dim=vardim, ker_dims=[1024, 1024, 1024, 1024,1024],
                      device="cuda").to(args.device)
     # phi = AugNODE(in_dim=2, out_dim=2, sample_size=x.shape[0], ker_dims=[1024, 1024, 1024, 1024]).to(args.device)
@@ -145,7 +182,7 @@ def main():
         # print(phi.augment_part[0:3,0:3])
 
 
-        loss = torch.log(loss_fun(y.unsqueeze(0), x.unsqueeze(0)))
+        loss = loss_fun(y.unsqueeze(0), x.unsqueeze(0))
 
         loss.backward()
         optimizer.step()
@@ -154,13 +191,13 @@ def main():
         # print(phi.invert(x))
     # print(phi.invert(x)[:, -1])
     # print(x)
-    # torch.save(phi.state_dict(), "../models/phi_inference.pt")
+    torch.save(phi.state_dict(), "../models/phi_inference.pt")
     phi.load_state_dict(torch.load("../models/phi_inference.pt"))
     PlotFit(phi=phi, x=x, t=t)
     # distr = Pushforward(phi, func_square)
     # xsample = np.linspace(-4,-2, 1000)
     # ysample = np.linspace(-4,-2, 1000)
     # zsample = np.meshgrid(xsample, ysample)
-    PlotInterence(phi=phi, z=x, func=func_square)
+    PlotInterence(phi=phi, z=x, func=pattern_square)
 if __name__ == "__main__":
     main()
