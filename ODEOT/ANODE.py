@@ -115,16 +115,36 @@ class ParametrizationNet(nn.Module):
         # out = self.MLP(out)
         return out
 
-class InjAugNODE(nn.Module):
+class AugNODE(nn.Module):
     def __init__(self, in_dim=2, out_dim=3, var_dim=50, sample_size=100, ker_dims:list=[1024,1024,1024,1024], device:str="cuda"):
+        super(AugNODE, self).__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.var_dim = var_dim
+        self.odeblock = ODEBlock(ODEfunc(var_dim, ker_dims))
+        self.device = device
+        self.augment_part = nn.Parameter(torch.ones((sample_size, var_dim-self.in_dim),requires_grad=False, device=self.device))
+        # self.augMLP = MLP()
+        self.register_parameter("params",self.augment_part)
+        self.augout_part = None
+
+    def forward(self, x):
+        out = torch.zeros(x.shape[0], self.var_dim).to(self.device)
+        out[:, 0: x.shape[1]] = x
+        out[:, x.shape[1]:] = self.augment_part
+        out = self.odeblock(out)
+        self.augout_part=out[:,x.shape[1]:]
+        out = out[:, 0:self.out_dim]
+        return out
+
+class InjAugNODE(nn.Module):
+    def __init__(self, in_dim=2, out_dim=3, var_dim=50, ker_dims:list=[1024,1024,1024,1024], device:str="cuda"):
         super(InjAugNODE, self).__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.var_dim = var_dim
         self.odeblock = ODEBlock(ODEfunc(var_dim, ker_dims))
         self.device = device
-        # self.augment_part = torch.ones((sample_size, var_dim-self.in_dim),requires_grad=False, device="cuda")
-        # self.augMLP = MLP()
         self.augout_part = None
 
     def forward(self, x):
