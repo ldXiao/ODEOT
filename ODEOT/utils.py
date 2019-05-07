@@ -25,7 +25,6 @@ def load_mesh_by_file_extension(file_name):
 
     return v
 
-
 def meshgrid_vertices(w, urange=[0, 1], vrange=[0, 1]):
     """
     Return a meshgrid of vertex positions as an array of shape [w**2, 2]
@@ -40,9 +39,8 @@ def meshgrid_vertices(w, urange=[0, 1], vrange=[0, 1]):
         nu = w
         nv = w
     g = np.mgrid[urange[0]:urange[1]:complex(nu), vrange[0]:vrange[1]:complex(nv)]
-    v = np.vstack(map(np.ravel, g)).T
+    v = np.vstack(list(map(np.ravel, g))).T
     return np.ascontiguousarray(v)
-
 
 def meshgrid_face_indices(w):
     """
@@ -74,13 +72,14 @@ def get_Lines(phi, x, sample_rate):
     points = y
     for i in range(1,sample_rate+1):
         t = i * 1/ sample_rate
-        print(t)
+        # print(t)
         points = np.vstack([points, (phi.event_t(t, x)).cpu().numpy()])
+        print(len(points))
         if i < sample_rate:
             lines = np.vstack([lines, np.array([[i * n+ j, i * n+j+n] for j in range(n)])])
 
-    print(points)
-    print(lines)
+    print(len(points))
+    # print(lines)
     return list(points), list(lines)
 
 def plot_reconstruction(x, t, phi, grid_size):
@@ -124,6 +123,67 @@ def plot_reconstruction(x, t, phi, grid_size):
 
         open3d.draw_geometries([pcloud_gt, pcloud_recon, mesh_recon])
 
+# def plot_flow(x, t, phi, grid_size, t_sample):
+#     """
+#     Plot the ground truth points, and the reconstructed patch by meshing the domain [0, 1]^2 and lifting the mesh
+#     to R^3
+#     :param x: The ground truth points we are trying to fit
+#     :param t: The sample positions used to fit the mesh
+#     :param phi: The fitted neural network
+#     :param grid_size: The number of sample positions per axis in the meshgrid
+#     :return: None
+#     """
+#
+#
+#
+#     with torch.no_grad():
+#         mesh_samples = embed_3d(torch.from_numpy(meshgrid_vertices(grid_size)).to(x), t[0,2])
+#         mesh_faces = meshgrid_face_indices(grid_size)
+#         mesh_vertices = phi(mesh_samples)[:,0:3]
+#
+#
+#         recon_vertices = phi(t)[:,0:3]
+#
+#
+#         gt_color = np.array([0.1, 0.7, 0.1])
+#         recon_color = np.array([0.7, 0.1, 0.1])
+#         mesh_color = np.array([0.1, 0.1, 0.7])
+#         curve_color = np.array([0.2, 0.2, 0.5])
+#
+#
+#         pcloud_gt = open3d.PointCloud()
+#         pcloud_gt.points = open3d.Vector3dVector(x.cpu().numpy())
+#         pcloud_gt.paint_uniform_color(gt_color)
+#
+#         pcloud_inv = open3d.PointCloud()
+#         pcloud_inv.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
+#         pcloud_inv.paint_uniform_color(gt_color)
+#
+#         pcloud_recon = open3d.PointCloud()
+#         pcloud_recon.points = open3d.Vector3dVector(recon_vertices.cpu().numpy())
+#         pcloud_recon.paint_uniform_color(recon_color)
+#
+#         mesh_recon = open3d.TriangleMesh()
+#         mesh_recon.vertices = open3d.Vector3dVector(mesh_vertices.cpu().numpy())
+#         mesh_recon.triangles = open3d.Vector3iVector(mesh_faces)
+#         mesh_recon.compute_vertex_normals()
+#         mesh_recon.paint_uniform_color(mesh_color)
+#
+#         pc_initial=open3d.PointCloud()
+#         pc_initial.points = open3d.Vector3dVector(t.cpu().numpy())
+#         pc_initial.paint_uniform_color(recon_color)
+#
+#
+#
+#         flow_ode = open3d.LineSet()
+#
+#         flow = get_Lines(phi,t[::t_sample,:],15)
+#         flow_ode.points, flow_ode.lines = open3d.Vector3dVector(flow[0]), \
+#                                           open3d.Vector2iVector(flow[1])
+#
+#
+#         open3d.draw_geometries([pcloud_gt, pcloud_inv,pcloud_recon, mesh_recon, pc_initial, flow_ode])
+
 def plot_flow(x, t, phi, grid_size, t_sample):
     """
     Plot the ground truth points, and the reconstructed patch by meshing the domain [0, 1]^2 and lifting the mesh
@@ -135,7 +195,8 @@ def plot_flow(x, t, phi, grid_size, t_sample):
     :return: None
     """
 
-
+    # I'm doing the input here so you don't crash if you never use this function and don't have OpenGL
+    import open3d
 
     with torch.no_grad():
         mesh_samples = embed_3d(torch.from_numpy(meshgrid_vertices(grid_size)).to(x), t[0,2])
@@ -153,12 +214,8 @@ def plot_flow(x, t, phi, grid_size, t_sample):
 
 
         pcloud_gt = open3d.PointCloud()
-        pcloud_gt.points = open3d.Vector3dVector(x.cpu().numpy())
+        pcloud_gt.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
         pcloud_gt.paint_uniform_color(gt_color)
-
-        pcloud_inv = open3d.PointCloud()
-        pcloud_inv.points = open3d.Vector3dVector(phi.invert(x).cpu().numpy())
-        pcloud_inv.paint_uniform_color(gt_color)
 
         pcloud_recon = open3d.PointCloud()
         pcloud_recon.points = open3d.Vector3dVector(recon_vertices.cpu().numpy())
@@ -172,30 +229,36 @@ def plot_flow(x, t, phi, grid_size, t_sample):
 
         pc_initial=open3d.PointCloud()
         pc_initial.points = open3d.Vector3dVector(t.cpu().numpy())
-        pc_initial.paint_uniform_color(recon_color)
+        pc_initial.paint_uniform_color(curve_color)
 
 
 
         flow_ode = open3d.LineSet()
-
+        # print(x.shape)
+        # print(t.shape)
         flow = get_Lines(phi,t[::t_sample,:],15)
         flow_ode.points, flow_ode.lines = open3d.Vector3dVector(flow[0]), \
                                           open3d.Vector2iVector(flow[1])
+        # flow_ode.colors = open3d.Vector3dVector(curve_color)
 
-
-        open3d.draw_geometries([pcloud_gt, pcloud_inv,pcloud_recon, mesh_recon, pc_initial, flow_ode])
-
+        open3d.draw_geometries([pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode])
 ts = np.linspace(0,1,30)
 i = 0
 
-def animate_flow(x,t, phi, grid_size, t_sample):
+def animate_flow(x,t, phi, grid_size, t_sample, mesh0=None):
     import open3d
 
     with torch.no_grad():
-        mesh_samples = embed_3d(torch.from_numpy(meshgrid_vertices(grid_size)).to(x), t[0, 2])
-        mesh_faces = meshgrid_face_indices(grid_size)
-        mesh_vertices = phi(mesh_samples)[:, 0:3]
-
+        if mesh0 == None:
+            mesh_samples = embed_3d(torch.from_numpy(meshgrid_vertices(grid_size)).to(x), t[0, 2])
+            print(mesh_samples.shape)
+            mesh_faces = meshgrid_face_indices(grid_size)
+            mesh_vertices = phi(mesh_samples)[:, 0:3]
+        else:
+            mesh_samples = torch.from_numpy(mesh0[0]).to(x)
+            print("sample", mesh_samples.shape)
+            mesh_faces = mesh0[1][:,0:3]
+            mesh_vertices = phi(mesh_samples)[:,0:3]
         recon_vertices = phi(t)[:, 0:3]
 
         gt_color = np.array([0.1, 0.7, 0.1])
@@ -224,9 +287,12 @@ def animate_flow(x,t, phi, grid_size, t_sample):
         flow_ode = open3d.LineSet()
         # print(x.shape)
         # print(t.shape)
-        flow = get_Lines(phi, t[::t_sample, :], 15)
+        flow = get_Lines(phi, t[::t_sample, :], 30)
+        print(len(flow[0]))
         flow_ode.points, flow_ode.lines = open3d.Vector3dVector(flow[0]), \
                                           open3d.Vector2iVector(flow[1])
+
+
         # flow_ode.colors = open3d.Vector3dVector(curve_color)
         # vis = open3d.Visualizer()
         # vis.create_window()
@@ -245,14 +311,17 @@ def animate_flow(x,t, phi, grid_size, t_sample):
             # ctr.rotate(10.0, 0.0)
             # global i, ts
 
-            global i, ts
+            global i, ts, mesh0
             if i == 29:
                 return True
             print(i)
             i += 1
-            t = ts[i]
-            mesh_faces = meshgrid_face_indices(grid_size)
-            mesh_vertices = phi.event_t(t, mesh_samples)[:, 0:3]
+            t1 = ts[i]
+            # if mesh0 == None:
+            #     mesh_faces = meshgrid_face_indices(grid_size)
+            # else:
+            #     mesh_faces =mesh0[1]
+            mesh_vertices = phi.event_t(t1, mesh_samples)[:, 0:3]
             mesh_recon.vertices = open3d.Vector3dVector(mesh_vertices.cpu().numpy())
             mesh_recon.triangles = open3d.Vector3iVector(mesh_faces)
             mesh_recon.compute_vertex_normals()
@@ -298,9 +367,9 @@ def gen2Dsample_disk(num:int,func:callable, maxval:float):
     count = 0
     sample = np.zeros((num, 2))
     while count < num:
-        z = np.random.rand(2) * 2 -np.ones(2)
+        z = np.random.rand(2) * 4 -np.ones(2)
         u = np.random.rand(1)
-        r2= z[0] ** 2 + z[1]** 2
+        r2= np.sqrt(z[0] ** 2/8 + z[1]** 2/4)
         if r2 < 1:
             val = func(z[0], z[1])
             if u < val / maxval:

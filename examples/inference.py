@@ -26,7 +26,7 @@ argparser.add_argument("--tol", "-tol", type=float, default=1e-3)
 args = argparser.parse_args()
 
 
-def func_square(x,y):
+def func_square0(x,y):
     if (x<1 and x>0) and (y<1 and y>0):
         # xt = (x <1 and x >2/3) or (x>0 and x < 1/3)
         # yt = (y <1 and y >2/3) or (y>0 and y < 1/3)
@@ -39,17 +39,27 @@ def func_square(x,y):
         absx = abs(x - 0.5)
         absy = abs(y - 0.5)
         maxabs = max(absx, absy)
-        if maxabs < 0.1:
-            return 1
-        elif maxabs >0.2 and maxabs <0.3:
+        # if maxabs >0.2 and maxabs <0.3:
+        #     return 0.5
+        if maxabs>0.4:
             return 0.5
-        elif maxabs>0.4:
-            return 0.3
         else:
             return 0
     else:
         return 0
     # return 1
+
+def func_square1(x,y):
+    absx = abs(x - 0.5)
+    absy = abs(y - 0.5)
+    maxabs = max(absx, absy)
+    if (x < 1 and x > 0) and (y < 1 and y > 0):
+        if maxabs < 0.1:
+            return 1
+        else:
+            return 0
+    else:
+        return 0
 
 def pattern_square(x,y):
     if (x<1 and x>0) and (y<1 and y>0):
@@ -69,31 +79,39 @@ def pattern_square(x,y):
         elif maxabs >0.2 and maxabs <0.3:
             return 0.5
         elif maxabs>0.4:
-            return 0.3
+            return 0.5
         else:
             return 0
     else:
         return 0
 
-def func_disk(x,y):
+def func_disk0(x,y):
     # dist0 = np.sqrt((x+0.7)** 2 + (y+0.7)**2)
-    # dist1 = np.sqrt( (x-0.3)**2 + (y-0.3)**2)
-    # if dist0 < 0.2:
-    #     return 1
-    # elif dist1 > 0.3 and dist1<0.4:
-    #     return 1
-    # elif dist1 > 0.5 and dist1 < 0.6:
-    #     return 1
-    # else:
-    #     return 0
-    return np.exp(- 3 * (x **2 + y** 2))* np.cos(2.5 * np.pi * np.sqrt((x **2 + y** 2))) ** 2
+    dist1 = np.sqrt( (x-0.3)**2/2 + (y-0.3)**2)
+    # if dist1 > 0.3 and dist1<0.4:
+    #     return 0.5
+    if dist1 > 0.5 and dist1 < 0.6:
+        return 0.3
+    else:
+        return 0
+    # return np.exp(- 3 * (x **2/2 + y** 2))* np.cos(2.5 * np.pi * np.sqrt((x **2/2 + y** 2))) ** 2
+def func_disk1(x,y):
+    dist1 = np.sqrt((x+0.5) ** 2 + (y+0.5)**2)
+    if dist1 < 0.1:
+        return 1
+    else:
+        return 0
 
-def PlotFit(phi, t, x):
+def PlotFit(phi, t0, x0, t1, x1):
     with torch.no_grad():
-        y = phi(t).cpu().numpy()[:,0:2]
-        x = x.cpu().numpy()[:,0:2]
-        plt.plot(x[:,0], x[:,1],'o', label="target")
-        plt.plot(y[:,0], y[:,1], 'x', label="fit")
+        y0 = phi(t0).cpu().numpy()[:,0:2]
+        x0 = x0.cpu().numpy()[:,0:2]
+        y1 = phi(t1).cpu().numpy()[:,0:2]
+        x1 = x1.cpu().numpy()[:,0:2]
+        plt.plot(x0[:,0], x0[:,1],'o', label="target0")
+        plt.plot(y0[:,0], y0[:,1], 'x', label="fit0")
+        plt.plot(x1[:, 0], x1[:, 1], 'o', label="target1")
+        plt.plot(y1[:, 0], y1[:, 1], 'x', label="fit1")
         plt.legend()
         plt.show()
 
@@ -153,36 +171,48 @@ class MLP(nn.Module):
         return x
 
 def main():
-    sample_x = gen2Dsample_disk(1000, func_disk, 1).astype(np.float32)
-    sample_x = sample_x - np.ones_like(sample_x) * 3
-    sample_t = gen2Dsample_square(1000, func_square, 1).astype(np.float32)
-
-    plt.plot(sample_t[:,0],sample_t[:,1], 'x', label="source")
-    plt.plot(sample_x[:, 0], sample_x[:, 1], 'x', label="target")
+    sample_x0 = gen2Dsample_disk(500, func_disk0, 1).astype(np.float32)
+    sample_x0 = sample_x0 - np.ones_like(sample_x0) * 3
+    sample_x1 = gen2Dsample_disk(500, func_disk1, 1).astype(np.float32)
+    sample_x1 = sample_x1 - np.ones_like(sample_x1) * 3
+    sample_t0 = gen2Dsample_square(500, func_square0, 1).astype(np.float32)
+    sample_t1 = gen2Dsample_square(500, func_square1, 1).astype(np.float32)
+    plt.plot(sample_t0[:,0],sample_t0[:,1], 'x', label="source0")
+    plt.plot(sample_t1[:, 0], sample_t1[:, 1], 'x', label="source1")
+    plt.plot(sample_x0[:, 0], sample_x0[:, 1], 'o', label="target0")
+    plt.plot(sample_x1[:, 0], sample_x1[:, 1], 'o', label="target1")
     plt.legend()
     plt.show()
-    t = torch.from_numpy(sample_t).to(args.device)
-    x = torch.from_numpy(sample_x).to(args.device)
-    vardim = 40
+    t0 = torch.from_numpy(sample_t0).to(args.device)
+    x0 = torch.from_numpy(sample_x0).to(args.device)
+    t1 = torch.from_numpy(sample_t1).to(args.device)
+    x1 = torch.from_numpy(sample_x1).to(args.device)
+    vardim = 4
     phi = InjAugNODE(in_dim=2, out_dim=2, var_dim=vardim, ker_dims=[1024, 1024, 1024, 1024,1024],
                      device="cuda").to(args.device)
-    # phi = AugNODE(in_dim=2, out_dim=2, sample_size=x.shape[0], ker_dims=[1024, 1024, 1024, 1024]).to(args.device)
+    # phi = AugNODE(in_dim=2, out_dim=2, sample_size=x0.shape[0]+x1.shape[0], ker_dims=[1024, 1024, 1024, 1024]).to(args.device)
     # phi = MLP(in_dim=2,out_dim=2).to(args.device)
-    loss_fun = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
-    dummy = torch.ones(x.shape[0], vardim).to(args.device)
-    dummy[:, 0:x.shape[1]] = x
-    x = dummy
+    loss_fun0 = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
+    loss_fun1 = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
+    dummy0 = torch.ones(x0.shape[0], vardim).to(args.device)
+    dummy0[:, 0:x0.shape[1]] = x0
+    x0 = dummy0
+    #
+    dummy1 = torch.ones(x1.shape[0], vardim).to(args.device)
+    dummy1[:, 0:x1.shape[1]] = x1
+    x1 = dummy1
 
     optimizer = torch.optim.Adam(phi.parameters(), lr=0.0001)
     for epoch in range(1, args.num_epochs+1):
         optimizer.zero_grad()
 
         # Do the forward pass of the neural net, evaluating the function at the parametric points
-        y = phi(t)
+        y0 = phi(t0)
+        y1= phi(t1)
         # print(phi.augment_part[0:3,0:3])
 
 
-        loss = loss_fun(y.unsqueeze(0), x.unsqueeze(0))
+        loss = loss_fun0(y0.unsqueeze(0), x0.unsqueeze(0))+ loss_fun1(y1.unsqueeze(0), x1.unsqueeze(0))
 
         loss.backward()
         optimizer.step()
@@ -191,13 +221,13 @@ def main():
         # print(phi.invert(x))
     # print(phi.invert(x)[:, -1])
     # print(x)
-    torch.save(phi.state_dict(), "../models/phi_inference.pt")
-    phi.load_state_dict(torch.load("../models/phi_inference.pt"))
-    PlotFit(phi=phi, x=x, t=t)
+    torch.save(phi.state_dict(), "../models/phi_inference1.pt")
+    phi.load_state_dict(torch.load("../models/phi_inference1.pt"))
+    PlotFit(phi=phi, x0=x0, t0=t0, x1=x1, t1=t1)
     # distr = Pushforward(phi, func_square)
     # xsample = np.linspace(-4,-2, 1000)
     # ysample = np.linspace(-4,-2, 1000)
     # zsample = np.meshgrid(xsample, ysample)
-    PlotInterence(phi=phi, z=x, func=pattern_square)
+    # PlotInterence(phi=phi, z=x1, func=pattern_square)
 if __name__ == "__main__":
     main()

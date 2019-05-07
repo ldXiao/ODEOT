@@ -148,7 +148,7 @@ class InjAugNODE(nn.Module):
         self.augout_part = None
 
     def forward(self, x):
-        out = torch.zeros(x.shape[0], self.var_dim).to(self.device)
+        out = torch.ones(x.shape[0], self.var_dim).to(self.device)
         out[:, 0: x.shape[1]] = x
         # out[:, x.shape[1]:] = torch.ones((x.shape[0], self.var_dim-x.shape[1]), device=self.device)
         out = self.odeblock(out)
@@ -171,7 +171,7 @@ class InjAugNODE(nn.Module):
         # timescale = torch.tensor([0,t]).type_as(x)
         # print(x)
         # print(t)
-        out = torch.zeros(x.shape[0], self.var_dim).to(self.device)
+        out = torch.ones(x.shape[0], self.var_dim).to(self.device)
         out[:, 0: x.shape[1]] = x
         # out[:, x.shape[1]:] = self.MLP(torch.ones(x.shape[0], self.var_dim-x.shape[1]).to(args.device))
         out = self.odeblock.event_t(t, out)

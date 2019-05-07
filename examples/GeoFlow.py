@@ -49,7 +49,7 @@ def main():
 
     # The model is a simple fully connected network mapping a 2D parameter point to 3D
     # phi = ParametrizationNet(in_dim=3, out_dim=3, var_dim=4).to(args.device)
-    vardim=40
+    vardim=3
     phi = InjAugNODE(in_dim=3, out_dim=3, var_dim=vardim, ker_dims=[1024,1024,1024,1024], device="cuda").to(args.device)
     # Eps is 1/lambda and max_iters is the maximum number of Sinkhorn iterations to do
     loss_fun = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
@@ -81,8 +81,9 @@ def main():
     # print(x)
     torch.save(phi.state_dict(), "../models/phi.pt")
     phi.load_state_dict(torch.load("../models/phi.pt"))
-    # plot_flow(x[:,0:3], t, phi, 128,  t.shape[0]//100)
-    animate_flow(x[:,0:3],t,phi,128, t.shape[0]//100)
+    print("hah",phi(t)[:,0:3]-phi.event_t(1,t))
+    plot_flow(x[:,0:3], t, phi, 128,  t.shape[0]//100)
+    # animate_flow(x[:,0:3],t,phi,128, t.shape[0]//100)
 
 if __name__ == "__main__":
     main()
