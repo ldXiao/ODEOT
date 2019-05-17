@@ -11,3 +11,5 @@ install:
   - conda info -a
   - conda env create -f environment.yml python=$TRAVIS_PYTHON_VERSION
   - conda activate NeuralODE
+script:
+  - python tests.py
