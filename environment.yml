@@ -284,6 +284,5 @@ dependencies:
     - msgpack==0.6.1
     - tables==3.5.1
     - torch==1.1.0
-    - torchdiffeq==0.0.1
 prefix: /home/lind/anaconda3/envs/NeuralODE
 

@@ -10,4 +10,10 @@ install:
   - conda env create -f environment.yml
   - conda activate NeuralODE
 script:
+  - cd ..
+  - git clone https://github.com/rtqichen/torchdiffeq.git
+  - cd torchdiffeq
+  - pip install -e .
+  - cd ..
+  - cd ODEOT
   - python tests.py
