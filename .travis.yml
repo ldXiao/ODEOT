@@ -9,8 +9,9 @@ install:
   - conda info -a
   - conda env create -f environment.yml
   - conda init bash
-  - source activate NeuralODE
 script:
+  - source activate NeuralODE
+  - which python
   - cd ..
   - git clone https://github.com/rtqichen/torchdiffeq.git
   - cd torchdiffeq
