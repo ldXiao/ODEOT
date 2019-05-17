@@ -62,7 +62,7 @@ def func_square1(x,y):
         return 0
 
 def pattern_square(x,y):
-    if (x<1 and x>0) and (y<1 and y>0):
+    # if (x<1 and x>0) and (y<1 and y>0):
         # xt = (x <1 and x >2/3) or (x>0 and x < 1/3)
         # yt = (y <1 and y >2/3) or (y>0 and y < 1/3)
         # if (xt and yt):
@@ -71,19 +71,20 @@ def pattern_square(x,y):
         #     return 1
         # else:
         #     return 0
-        absx = abs(x - 0.5)
-        absy = abs(y - 0.5)
-        maxabs = max(absx, absy)
-        if maxabs < 0.1:
-            return 1
-        elif maxabs >0.2 and maxabs <0.3:
-            return 0.5
-        elif maxabs>0.4:
-            return 0.5
-        else:
-            return 0
-    else:
-        return 0
+        # absx = abs(x - 0.5)
+        # absy = abs(y - 0.5)
+        # maxabs = max(absx, absy)
+        # if maxabs < 0.1:
+        #     return 1
+        # elif maxabs >0.2 and maxabs <0.3:
+        #     return 0.5
+        # elif maxabs>0.4:
+        #     return 0.5
+        # else:
+        #     return 0
+    return func_square0(x,y)+func_square1(x,y)
+    # else:
+    #     return 0
 
 def func_disk0(x,y):
     # dist0 = np.sqrt((x+0.7)** 2 + (y+0.7)**2)
@@ -102,16 +103,20 @@ def func_disk1(x,y):
     else:
         return 0
 
+
+
 def PlotFit(phi, t0, x0, t1, x1):
     with torch.no_grad():
         y0 = phi(t0).cpu().numpy()[:,0:2]
         x0 = x0.cpu().numpy()[:,0:2]
         y1 = phi(t1).cpu().numpy()[:,0:2]
         x1 = x1.cpu().numpy()[:,0:2]
-        plt.plot(x0[:,0], x0[:,1],'o', label="target0")
-        plt.plot(y0[:,0], y0[:,1], 'x', label="fit0")
-        plt.plot(x1[:, 0], x1[:, 1], 'o', label="target1")
+
+        plt.plot(y0[:, 0], y0[:, 1], 'x', label="fit0")
         plt.plot(y1[:, 0], y1[:, 1], 'x', label="fit1")
+        plt.plot(x0[:, 0], x0[:, 1], 'o', label="target0")
+
+        plt.plot(x1[:, 0], x1[:, 1], 'x', label="target1")
         plt.legend()
         plt.show()
 
@@ -144,9 +149,9 @@ def PlotInterence(phi, z, func:callable):
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('PDF')
-        ax.set_title('Surface plot of Gaussian 2D KDE')
+        ax.set_title('Pushforwarded distribution function')
         fig.colorbar(surf, shrink=0.5, aspect=5)  # add color bar indicating the PDF
-        ax.view_init(60, 35)
+        # ax.view_init(60, 35)
         plt.show()
 
 
@@ -221,13 +226,16 @@ def main():
         # print(phi.invert(x))
     # print(phi.invert(x)[:, -1])
     # print(x)
-    torch.save(phi.state_dict(), "../models/phi_inference1.pt")
-    phi.load_state_dict(torch.load("../models/phi_inference1.pt"))
+    # torch.save(phi.state_dict(), "../models/phi_inference2.pt")
+    phi.load_state_dict(torch.load("../models/phi_inference2.pt"))
     PlotFit(phi=phi, x0=x0, t0=t0, x1=x1, t1=t1)
     # distr = Pushforward(phi, func_square)
     # xsample = np.linspace(-4,-2, 1000)
     # ysample = np.linspace(-4,-2, 1000)
     # zsample = np.meshgrid(xsample, ysample)
-    # PlotInterence(phi=phi, z=x1, func=pattern_square)
+    z = torch.ones(x0.shape[0]+x1.shape[0], x0.shape[1]).to(args.device)
+    z[0:x0.shape[0],:]=x0
+    z[x0.shape[0]:,:]=x1
+    PlotInterence(phi=phi, z=z, func=pattern_square)
 if __name__ == "__main__":
     main()

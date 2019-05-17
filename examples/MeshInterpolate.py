@@ -9,12 +9,12 @@ import numpy as np
 import point_cloud_utils as pcu
 from fml.nn import SinkhornLoss
 from ODEOT.ANODE import InjAugNODE
-from ODEOT.utils import load_mesh_by_file_extension, plot_flow, embed_3d, animate_flow
+from ODEOT.utils import load_mesh_by_file_extension, plot_flow, embed_3d, animate_flow, precond, seed_everything
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("--mesh_filename0", "-f0", type=str, help="Point cloud to reconstruct")
 argparser.add_argument("--mesh_filename1", "-f1", type=str, help="Point cloud to reconstruct")
-argparser.add_argument("--max-sinkhorn-iters", "-si", type=int, default=16,
+argparser.add_argument("--max-sinkhorn-iters", "-si", type=int, default=64,
                        help="Maximum number of Sinkhorn iterations")
 argparser.add_argument("--sinkhorn-eps", "-se", type=float, default=1e-3,
                        help="Maximum number of Sinkhorn iterations")
@@ -31,17 +31,20 @@ def main():
     # everything to the right type
 
     # x is a tensor of shape [n, 3] containing the positions of the points we are trying to fit
+    seed_everything(1024)
     mesh0 = pcu.read_obj(args.mesh_filename0)
     mesh1 = pcu.read_obj(args.mesh_filename1)
+    t = torch.from_numpy(pcu.sample_mesh_lloyd(mesh0[0],mesh0[1][:,0:3],2000).astype(np.float32)).to(args.device)
+    x = torch.from_numpy(pcu.sample_mesh_lloyd(mesh1[0],mesh1[1][:,0:3],2000).astype(np.float32)).to(args.device)
 
-    t = torch.from_numpy(pcu.sample_mesh_lloyd(mesh0[0],mesh0[1][:,0:3],1000).astype(np.float32)).to(args.device)
-    x = torch.from_numpy(pcu.sample_mesh_lloyd(mesh1[0],mesh1[1][:,0:3],1000).astype(np.float32)).to(args.device)
-    x += torch.ones_like(x)
-    # print(t)
-
+    t=precond(t,0)
+    print("haha",mesh0[0])
+    precond(torch.from_numpy(mesh0[0]),0)
+    x=precond(x,1)
     vardim = 3
     phi = InjAugNODE(in_dim=3, out_dim=3, var_dim=vardim, ker_dims=[1024, 1024, 1024, 1024], device="cuda").to(
         args.device)
+    phi.load_state_dict(torch.load("../models/phi_itpllionhead.pt"))
     # Eps is 1/lambda and max_iters is the maximum number of Sinkhorn iterations to do
     loss_fun = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
     dummy = torch.ones(x.shape[0], vardim).to(args.device)
@@ -49,7 +52,7 @@ def main():
     x = dummy
 
     # Here I'm using the Adam optimizer just as an example, you'll need to replace this with your thing
-    optimizer = torch.optim.Adam(phi.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(phi.parameters(), lr=args.learning_rate)
     # optimizer.add_param_group({"params": phi.augment_part})
     # print("Number of Parameters=", count_parameters(phi))
 
@@ -69,8 +72,8 @@ def main():
 
     print(phi.invert(x)[:, -1])
     # print(x)
-    torch.save(phi.state_dict(), "../models/phi_itpl.pt")
-    phi.load_state_dict(torch.load("../models/phi_itpl.pt"))
+    torch.save(phi.state_dict(), "../models/phi_itpllionhead.pt")
+    phi.load_state_dict(torch.load("../models/phi_itpllionhead.pt"))
     # plot_flow(x[:,0:3], t, phi, 128,  t.shape[0]//100)
     animate_flow(x[:, 0:3], t, phi, 128, t.shape[0] // 100, mesh0=mesh0)
 

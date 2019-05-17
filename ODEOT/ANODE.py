@@ -71,6 +71,11 @@ class ODEBlock(nn.Module):
         out = odeint(self.odefunc, x, timescale, rtol=self.tol, atol=self.tol)
         return out[1]
 
+    def flow(self,t0,tf,x):
+        timescale = torch.tensor([t0, tf]).type_as(x)
+        out = odeint(self.odefunc, x, timescale, rtol=self.tol, atol=self.tol)
+        return out[1]
+
     def invert(self, y):
         timescale = torch.tensor([1,0]).type_as(y)
         input = odeint(self.odefunc, y, timescale, rtol=self.tol, atol=self.tol)
@@ -114,6 +119,8 @@ class ParametrizationNet(nn.Module):
         out = out[:, 0:self.out_dim]
         # out = self.MLP(out)
         return out
+
+
 
 class AugNODE(nn.Module):
     def __init__(self, in_dim=2, out_dim=3, var_dim=50, sample_size=100, ker_dims:list=[1024,1024,1024,1024], device:str="cuda"):
@@ -177,6 +184,14 @@ class InjAugNODE(nn.Module):
         out = self.odeblock.event_t(t, out)
         out = out[:, 0:self.out_dim]
         # out = self.MLP(out)
+        return out
+
+    def flow(self, t0,tf, x):
+        out = torch.zeros(x.shape[0], self.var_dim).to(x.device)
+        out[:, 0: x.shape[1]] = x
+        # out[:, x.shape[1]:] = self.MLP(torch.ones(x.shape[0], self.var_dim-x.shape[1]).to(args.device))
+        out = self.odeblock.flow(t0,tf, out)
+        out = out[:, 0:self.out_dim]
         return out
 
 

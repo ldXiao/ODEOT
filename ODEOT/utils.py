@@ -242,7 +242,11 @@ def plot_flow(x, t, phi, grid_size, t_sample):
         # flow_ode.colors = open3d.Vector3dVector(curve_color)
 
         open3d.draw_geometries([pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode])
-ts = np.linspace(0,1,30)
+
+Nframes = 50
+
+
+ts = np.linspace(0,1,Nframes)
 i = 0
 
 def animate_flow(x,t, phi, grid_size, t_sample, mesh0=None):
@@ -306,22 +310,31 @@ def animate_flow(x,t, phi, grid_size, t_sample, mesh0=None):
         # vis.update_geometry()
         # vis.update_renderer()
         # vis.poll_events()
+        store_frames = []
+        temp = mesh_samples
+        store_frames.append(temp)
+        for j in range(0, Nframes-1):
+            print(j)
+            tj = ts[j]
+            tnext = ts[j+1]
+            temp = phi.flow(tj, tnext, temp)[:, 0:3]
+            store_frames.append(temp)
         def next_frame(vis):
             # ctr = vis.get_view_control()
             # ctr.rotate(10.0, 0.0)
             # global i, ts
 
-            global i, ts, mesh0
-            if i == 29:
+            global i, ts, mesh0, Nframes
+            if i >= Nframes:
                 return True
             print(i)
-            i += 1
-            t1 = ts[i]
+
             # if mesh0 == None:
             #     mesh_faces = meshgrid_face_indices(grid_size)
             # else:
             #     mesh_faces =mesh0[1]
-            mesh_vertices = phi.event_t(t1, mesh_samples)[:, 0:3]
+            mesh_vertices = store_frames[i]
+            i += 1
             mesh_recon.vertices = open3d.Vector3dVector(mesh_vertices.cpu().numpy())
             mesh_recon.triangles = open3d.Vector3iVector(mesh_faces)
             mesh_recon.compute_vertex_normals()
@@ -342,6 +355,10 @@ def animate_flow(x,t, phi, grid_size, t_sample, mesh0=None):
         open3d.draw_geometries_with_key_callbacks(
             [pcloud_gt, pcloud_recon, mesh_recon, pc_initial, flow_ode],
             key_to_callback)
+
+def save_visual_disct(x,t, phi, grid_size, t_sample, mesh0=None):
+    vdict ={}
+    vdict[""]
 
 def gen2Dsample_square(num:int, func:callable, maxval:float):
     """
@@ -377,3 +394,42 @@ def gen2Dsample_disk(num:int,func:callable, maxval:float):
                 count += 1
                 print(count)
     return sample
+
+def precond(t:torch.Tensor,bias:float):
+    tmin0, tmax0 = t[:, 0].min(), t[:, 0].max()
+    tmin1, tmax1 = t[:, 1].min(), t[:, 1].max()
+    tmin2, tmax2 = t[:, 2].min(), t[:, 2].max()
+    dt0 = tmax0 - tmin0
+    dt1 = tmax1 - tmin1
+    dt2 = tmax2 - tmin2
+    print(dt0,dt1,dt2)
+    tc0 = (tmax0 + tmin0) / 2
+    tc1 = (tmax1 + tmin1) / 2
+    tc2 = (tmax2 + tmin2) / 2
+    dt = torch.tensor([dt0, dt1, dt2]).max().cpu().numpy()  # scale factor
+
+
+    shift = torch.ones_like(t)
+    shift[:, 0].fill_(tc0.item())
+    shift[:, 1].fill_(tc1.item())
+    shift[:, 2].fill_(tc2.item())
+    t -= shift
+    t /= dt.item()
+    # if bias == 0:
+    #     t[:,1] *= -1
+    bshift = torch.ones_like(t)
+    bshift[:, 0].fill_(0)
+    bshift[:, 1].fill_(0)
+    bshift[:, 2].fill_(bias)
+    t+=bshift
+
+
+    return t
+
+def seed_everything(seed):
+    if seed < 0:
+        seed = np.random.randint(np.iinfo(np.int32).max)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    return None
