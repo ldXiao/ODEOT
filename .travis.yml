@@ -17,4 +17,4 @@ script:
   - pip install -e .
   - cd ..
   - cd ODEOT
-  - python tests.py
+  - python test.py
