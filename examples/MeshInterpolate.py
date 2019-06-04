@@ -42,9 +42,9 @@ def main():
     precond(torch.from_numpy(mesh0[0]),0)
     x=precond(x,1)
     vardim = 3
-    phi = InjAugNODE(in_dim=3, out_dim=3, var_dim=vardim, ker_dims=[1024, 1024, 1024, 1024], device="cuda").to(
+    phi = InjAugNODE(in_dim=3, out_dim=3, var_dim=vardim, ker_dims=[1024, 1024, 1024, 1024], device=args.device).to(
         args.device)
-    phi.load_state_dict(torch.load("../models/phi_itpllionhead.pt"))
+    # phi.load_state_dict(torch.load("../models/phi_itpllionhead.pt"))
     # Eps is 1/lambda and max_iters is the maximum number of Sinkhorn iterations to do
     loss_fun = SinkhornLoss(eps=args.sinkhorn_eps, max_iters=args.max_sinkhorn_iters)
     dummy = torch.ones(x.shape[0], vardim).to(args.device)

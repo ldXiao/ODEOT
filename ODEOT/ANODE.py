@@ -91,11 +91,12 @@ class ODEBlock(nn.Module):
 
 class ParametrizationNet(nn.Module):
 
-    def __init__(self, in_dim=2, out_dim=3, var_dim=50):
+    def __init__(self, in_dim=2, out_dim=3, var_dim=50, device="cuda"):
         super(ParametrizationNet, self).__init__()
         self.out_dim = out_dim
+        self.device = device
         self.var_dim = var_dim
-        self.odeblock = ODEBlock(ODEfunc(var_dim, [1024,1024,1024,1024]))
+        self.odeblock = ODEBlock(ODEfunc(var_dim, [1024,1024,1024,1024], device=self.device))
         self.MLP = MLP(in_dim=var_dim - in_dim, out_dim=var_dim-in_dim)
 
     def forward(self, x):
@@ -150,8 +151,8 @@ class InjAugNODE(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.var_dim = var_dim
-        self.odeblock = ODEBlock(ODEfunc(var_dim, ker_dims))
         self.device = device
+        self.odeblock = ODEBlock(ODEfunc(var_dim, ker_dims, device=self.device))
         self.augout_part = None
 
     def forward(self, x):
