@@ -1,3 +1,5 @@
+import sys
+sys.path.append("../")
 from ODEOT.ANODE import InjAugNODE, AugNODE
 from ODEOT.Pushforward import Pushforward
 from ODEOT.utils import gen2Dsample_square, gen2Dsample_disk
